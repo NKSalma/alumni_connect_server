@@ -1,0 +1,17 @@
+{
+  "name": "alumni-connect",
+  "version": "0.0.0",
+  "author": "salmaruby96@gmail.com",
+  "scripts": {
+    "test": "",
+    "start": "node index.js"
+  },
+  "main": "lib/foo.js",
+  "dependencies": {
+    "body-parser": "1.15.2",
+    "cors": "2.8.1",
+    "express": "4.14.0",
+    "mongoose": "^4.7.5",
+    "nconf": "^0.8.4"
+  }
+}
