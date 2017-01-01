@@ -19,7 +19,10 @@ var constants = {
         _id: "_id"
     },
     notificationKeys: {
-        responder: "responder"
+        responder: "responder",
+        requestor: "requestor",
+        status: "status",
+        isInProgress: "isInProgress"
     },
     errors: {
         unAuthorized: "You are not authorized to perform this operation. Contact our support",
@@ -28,7 +31,12 @@ var constants = {
         notfound: "There is no registered user with this email",
         alumniNotFound: "No such user exists in this group.",
         notificationNotFound: "No such notification exists in our database",
-        alreadyResponded: "You have already responded to this request"
+        alreadyResponded: "You have already responded to this request",
+        alreadyRequested: "You have already requested to connect. Kindly wait for his response.",
+        alreadyConnected: "Contact details are already shared with you. Kindly use them"
+    },
+    errorCode: {
+        mongooseCastError: "CastError"
     }
 }
 

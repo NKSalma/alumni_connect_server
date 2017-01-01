@@ -4,7 +4,7 @@ var bodyParser = require("body-parser");
 var app = express();
 var nconf = require("nconf").argv().env();
 if (nconf.get("NODE_ENV") == "dev") {
-    console.log("Env is dev");
+    console.log("Using dev variables");
     nconf.file("env/dev.json");
 }
 var validator = require("./services/validatorService");
@@ -27,7 +27,6 @@ mongoose.connect(nconf.get("mongo_url")).then(function (err) {
         } else {
             userService.isRegisteredUser(payload.email).then(function (isRegistered) {
                 if (isRegistered) {
-                    console.log("Registered user");
                     return userService.getUsersWith(constants.userDocKeys.email, payload.email, true)
                 } else {
                     return userService.createUser(payload);
@@ -38,7 +37,6 @@ mongoose.connect(nconf.get("mongo_url")).then(function (err) {
                 }
                 res.status(200).send(userDoc[constants.userDocKeys._id]);
             }).catch(function (err) {
-                console.log(err);
                 return res.status(400).send(constants.errors.unProccessableRequest);
             });
         }
@@ -57,6 +55,16 @@ mongoose.connect(nconf.get("mongo_url")).then(function (err) {
         }).catch(function (err) {
             res.status(422).send(err);
         });
+    });
+
+    app.use(function (req, res, next) {
+        if (req.path.indexOf("user") == -1) {
+            if (req.headers["authorization"]) {
+                next();
+            } else {
+                res.status(401).send(constants.errors.unAuthorized);
+            }
+        }
     });
 
     app.get("/posts", function (req, res) {
@@ -89,8 +97,12 @@ mongoose.connect(nconf.get("mongo_url")).then(function (err) {
         // Return all the alumni depending on search filter
         var searchKey = req.query.searchKey;
         var searchValue = req.query.filter;
-        userService.getUsersWith(searchKey, searchValue, false).then(function (posts) {
-            res.status(200).send(posts);
+        userService.getUsersWith(searchKey, searchValue, false).then(function (users) {
+            userService.updateConnectedUser(users, req.headers["authorization"]).then(function (updatedUsers) {
+                res.status(200).send(updatedUsers);
+            }).catch(function (err) {
+                res.status(422).send(err);
+            })
         }).catch(function (err) {
             res.status(422).send(err);
         });
@@ -101,7 +113,7 @@ mongoose.connect(nconf.get("mongo_url")).then(function (err) {
         notificationService.getNotificationsWith(constants.notificationKeys.responder, req.headers["authorization"], true)
             .then(function (notifications) {
                 res.status(200).send(notifications);
-            }).catch(function(err){
+            }).catch(function (err) {
                 res.status(422).send(err);
             });
     });

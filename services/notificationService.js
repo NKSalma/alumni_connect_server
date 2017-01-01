@@ -1,14 +1,45 @@
 // Service to return users or create user or delete user
 var NotificationSchema = require("./../models/notification");
 var StringUtils = require("./../common/StringUtils");
-var constants = require("./../common/constants")
+var constants = require("./../common/constants");
+var Q = require("q");
 var notificationService = {
     createNotification: function (doc) {
+        var d = Q.defer();
         var notificationDoc = new NotificationSchema.NotificationModel();
         Object.keys(doc).forEach(function (key) {
             notificationDoc[key] = doc[key];
         }, this);
-        return notificationDoc.save();
+        var searchObj = {};
+        searchObj[constants.notificationKeys.requestor] = doc[constants.notificationKeys.requestor];
+        searchObj[constants.notificationKeys.responder] = doc[constants.notificationKeys.responder];
+        NotificationSchema.NotificationModel.find(searchObj).exec()
+            .then(function (notifications) {
+                if (notifications.length > 0) {
+                    notifications.forEach(function (notification) {
+                        if (notification[constants.notificationKeys.isInProgress]) {
+                            d.reject(constants.errors.alreadyRequested);
+                            return d.promise;
+                        } else if (notification[constants.notificationKeys.status]) {
+                            d.reject(constants.errors.alreadyConnected);
+                            return d.promise;
+                        }
+                    }, this);
+                    notificationDoc.save().then(function (notification) {
+                        d.resolve(notification);
+                    }).catch(function (err) {
+                        d.reject(err);
+                    })
+                } else {
+                    notificationDoc.save().then(function (notification) {
+                        d.resolve(notification);
+                    }).catch(function (err) {
+                        d.reject(err);
+                    })
+                }
+            });
+
+        return d.promise;
     },
     getNotificationsWith: function (key, val, isValueComplete) {
         var searchObj = {};
@@ -21,21 +52,31 @@ var notificationService = {
         return NotificationSchema.NotificationModel.find(searchObj).limit(250).exec();
     },
     respondToNotification: function (response) {
-        return NotificationSchema.NotificationModel.findOne({ "_id": response.nid }).exec().then(function (notification) {
+        var d = Q.defer();
+
+        NotificationSchema.NotificationModel.findOne({ "_id": response.nid }).exec().then(function (notification) {
             if (notification) {
                 if (!notification.isInProgress) {
-                    throw new Error(constants.errors.alreadyResponded);
+                    d.reject(constants.errors.alreadyResponded);
                 } else {
                     notification.isInProgress = false;
                     notification.status = response.status;
                     return notification.save();
                 }
             } else {
-                throw new Error(constants.errors.notificationNotFound);
+                d.reject(constants.errors.notificationNotFound);
             }
-        }).catch(function(err){
-            return err;
+        }).then(function (notification) {
+            d.resolve(notification);
+        }).catch(function (err) {
+            if (err && err.name && err.name == constants.errorCode.mongooseCastError) {
+                d.reject(constants.errors.notificationNotFound);
+            } else {
+                d.reject(err);
+            }
         });
+
+        return d.promise;
     }
 }
 
