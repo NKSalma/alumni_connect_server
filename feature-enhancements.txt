@@ -1,3 +1,4 @@
 1) Allowing images in posts
 2) Chat box
 3) storing education qualification at all levels(school,college)
+4) Notify that someone accepted or rejected your request.
